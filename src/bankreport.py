@@ -5,6 +5,39 @@ import csv
 import locale
 import textwrap
 
+locale.setlocale(locale.LC_ALL, "")
+
+
+class Filter( object ):
+
+    pass
+
+class FirstWordFilter( Filter ):
+
+    def __init__( self, word ):
+
+        self.word = word
+
+    def process( self, entry ):
+
+        if entry.from_.startswith( self.word ):
+            entry.from_ = self.word
+
+        return entry
+
+class MultiFilter( Filter ):
+
+    def __init__( self, *filters ):
+
+        self.filters = filters
+
+    def process( self, entry ):
+
+        for filter_ in self.filters:
+            entry = filter_.process( entry )
+
+        return entry
+
 
 class Store( object ):
 
@@ -27,9 +60,13 @@ class Store( object ):
 
         items = sorted( self.break_down.items() )
 
-        return """%3s: %s
-        %s
-        """ % ( self.name, self.total, "\n".join( "%s %s" % ( key, value ) for key, value in items ) )
+        generator = ( locale.format_string( "\t%s %.2f", ( key, value ), True ) for key, value in items )
+        content = "\n".join( generator )
+
+        format = textwrap.dedent( "%3s: %s\n%s" )
+
+        return format % ( self.name, self.total, content )
+
 
 class Gatherer( object ):
 
@@ -47,10 +84,9 @@ class Gatherer( object ):
 
     def __repr__( self ):
 
-        locale.setlocale(locale.LC_ALL, "")
-
         format = textwrap.dedent( """
         %s
+
         %s
         """ )
 
@@ -62,7 +98,7 @@ class Entry( object ):
 
     def __init__( self, data ):
         self.type_ = data[0]
-        self.from_ = data[1]
+        self.from_ = data[1] or "<no name>"
         self.details = ( data[2], data[3], data[4] )
         self.amount = float(data[5])
         self.date = data[6]
@@ -81,9 +117,16 @@ def main(argv):
     csv_data = csv.reader( lines )
     named_data = ( Entry( entry ) for entry in csv_data )
 
+    filter_ = MultiFilter(
+            FirstWordFilter( "Bnz" ),
+            FirstWordFilter( "Nbnz" ),
+            )
+
+    filtered_data = ( filter_.process( entry ) for entry in named_data )
+
     gatherer = Gatherer()
 
-    map( gatherer.gather, named_data )
+    map( gatherer.gather, filtered_data )
 
     print gatherer
     
