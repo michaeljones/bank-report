@@ -25,6 +25,19 @@ class FirstWordFilter( Filter ):
 
         return entry
 
+class AnyWordFilter( Filter ):
+
+    def __init__( self, word ):
+
+        self.word = word
+
+    def process( self, entry ):
+
+        if entry.from_.count( self.word ):
+            entry.from_ = self.word
+
+        return entry
+
 class MultiFilter( Filter ):
 
     def __init__( self, *filters ):
@@ -120,6 +133,8 @@ def main(argv):
     filter_ = MultiFilter(
             FirstWordFilter( "Bnz" ),
             FirstWordFilter( "Nbnz" ),
+            FirstWordFilter( "Fix" ),
+            AnyWordFilter( "Unichem" ),
             )
 
     filtered_data = ( filter_.process( entry ) for entry in named_data )
