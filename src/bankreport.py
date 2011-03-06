@@ -107,7 +107,7 @@ class Gatherer( object ):
 
 
 
-class Entry( object ):
+class DebitCardEntry( object ):
 
     def __init__( self, data ):
         self.type_ = data[0]
@@ -119,22 +119,40 @@ class Entry( object ):
     def __repr__( self ):
 
         return "%s %s %s %s %s" % ( self.type_, self.from_, self.details, self.amount, self.date )
+
+
+class CreditCardEntry( object ):
+
+    def __init__( self, data ):
+        self.account = data[0]
+        multiplier = 1 if data[1] == "C" else -1
+        self.amount = multiplier * float( data[2] )
+        self.from_ = data[3]
+        self.dates = ( data[4], data[5] )
+
         
 
 def main(argv):
 
-    filename = argv[1]
+    mode = argv[1]
+    filename = argv[2]
 
     file_ = open( filename )
     lines = ( line for line in file_ )
     csv_data = csv.reader( lines )
-    named_data = ( Entry( entry ) for entry in csv_data )
+
+    if mode == "debitcard":
+        named_data = ( DebitCardEntry( entry ) for entry in csv_data )
+    elif mode == "creditcard":
+        named_data = ( CreditCardEntry( entry ) for entry in csv_data )
 
     filter_ = MultiFilter(
             FirstWordFilter( "Bnz" ),
             FirstWordFilter( "Nbnz" ),
             FirstWordFilter( "Fix" ),
+            FirstWordFilter( "Whitcoulls" ),
             AnyWordFilter( "Unichem" ),
+            AnyWordFilter( "New World" ),
             )
 
     filtered_data = ( filter_.process( entry ) for entry in named_data )
